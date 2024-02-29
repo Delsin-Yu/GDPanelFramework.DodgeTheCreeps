@@ -1,0 +1,27 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GDPanelFramework.DodgeTheCreeps", "GDPanelFramework.DodgeTheCreeps.csproj", "{93924A38-696B-4695-9B77-9084DD093220}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GDPanelFramework", "..\GDPanelFramework\GDPanelFramework.csproj", "{29414259-33D5-4AA7-88F5-027CCFB5D601}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+	Debug|Any CPU = Debug|Any CPU
+	ExportDebug|Any CPU = ExportDebug|Any CPU
+	ExportRelease|Any CPU = ExportRelease|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{93924A38-696B-4695-9B77-9084DD093220}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{93924A38-696B-4695-9B77-9084DD093220}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{93924A38-696B-4695-9B77-9084DD093220}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
+		{93924A38-696B-4695-9B77-9084DD093220}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
+		{93924A38-696B-4695-9B77-9084DD093220}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
+		{93924A38-696B-4695-9B77-9084DD093220}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+		{29414259-33D5-4AA7-88F5-027CCFB5D601}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29414259-33D5-4AA7-88F5-027CCFB5D601}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29414259-33D5-4AA7-88F5-027CCFB5D601}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29414259-33D5-4AA7-88F5-027CCFB5D601}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{29414259-33D5-4AA7-88F5-027CCFB5D601}.ExportRelease|Any CPU.ActiveCfg = Debug|Any CPU
+		{29414259-33D5-4AA7-88F5-027CCFB5D601}.ExportRelease|Any CPU.Build.0 = Debug|Any CPU
+	EndGlobalSection
+EndGlobal
