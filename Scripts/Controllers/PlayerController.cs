@@ -3,38 +3,42 @@ using GodotTask;
 
 namespace GDPanelFramework.DodgeTheCreeps;
 
+/// <summary>
+/// This class handles the visual and movement behavior of a player,
+/// it also manages collection detection. 
+/// </summary>
 public partial class PlayerController : Area2D
 {
-    [Export] private int _speed = 400;
-    [Export] private AnimatedSprite2D _animatedSprite;
-    [Export] private CollisionShape2D _collisionShape;
+    [Export] private int _speed = 400; // The speed for the player
+    [Export] private AnimatedSprite2D _animatedSprite; // The sprite component for the player
 
-    private Vector2 _moveDirection;
-    
+    /// <summary>
+    /// 
+    /// </summary>
     public Vector2 ScreenBound { private get; set; }
 
+    /// <summary>
+    /// The last input direction for this controller,
+    /// this property is updated by the binding method inside game panel. 
+    /// Setting this to <see cref="Vector2.Zero"/> effectively stops the controller.
+    /// </summary>
+    public Vector2 LastInputDirection { private get; set; }
+    
+    /// <summary>
+    /// Calls by the engine, updates the visual appearance and position of this controller.
+    /// </summary>
     public override void _Process(double delta)
     {
-        if (!Mathf.IsZeroApprox(_moveDirection.Length()))
+        if (!Mathf.IsZeroApprox(LastInputDirection.Length())) // Only do visual calculation if the input direction is not zero.
         {
             _animatedSprite.Play();
-            _animatedSprite.Animation = _moveDirection.Y != 0 ? "up" : "walk";
-            _animatedSprite.FlipH = _moveDirection.X < 0;
-            _animatedSprite.FlipV = _moveDirection.Y > 0;
+            _animatedSprite.Animation = LastInputDirection.Y != 0 ? "up" : "walk";
+            _animatedSprite.FlipH = LastInputDirection.X < 0;
+            _animatedSprite.FlipV = LastInputDirection.Y > 0;
         }
-        else _animatedSprite.Stop();
+        else _animatedSprite.Stop(); // Otherwise stops the animation.
 
-        Position += _moveDirection * _speed * (float)delta;
+        Position += LastInputDirection * _speed * (float)delta;
         Position = new(Mathf.Clamp(Position.X, 0, ScreenBound.X), Mathf.Clamp(Position.Y, 0, ScreenBound.Y));
     }
-
-    public async GDTask<Node> StartAndWaitForCollision()
-    {
-        _collisionShape.Disabled = false;
-        var hit = await ToSignal(this, SignalName.BodyEntered);
-        _collisionShape.SetDeferred(CollisionShape2D.PropertyName.Disabled, true);
-        return (Node)hit[0];
-    }
-    
-    public void UpdateMoveDirection(Vector2 normalizedMoveDirection) => _moveDirection = normalizedMoveDirection;
 }

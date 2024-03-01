@@ -112,10 +112,10 @@ public partial class GamePanel : UIPanelArg<GamePanel.OpenContext, Empty>
         StartScoreCount(mobSpawnerCTS.Token).Forget();
         StartMobSpawn(scoreTimerCTS.Token).Forget();
 
-        // This line enables the player collision, and continues after player receiving any collision.
-        var collider = await playerInstance.StartAndWaitForCollision();
+        // This line suspends the control flow and wait until player receives any collision.
+        var colliders = await ToSignal(playerInstance, Area2D.SignalName.BodyEntered);
 
-        GD.Print($"Collision to: {collider.Name}");
+        GD.Print($"Collision to: {((Node)colliders[0]).Name}");
         
         // Deletes the player, and unbind inputs.
         SetupControls(false);
@@ -152,12 +152,13 @@ public partial class GamePanel : UIPanelArg<GamePanel.OpenContext, Empty>
                     var normalized = rawInput.Normalized();
                     // Apply the last input direction to the player controller,
                     // note that this function does not move the player, only updates the cached input direction.
-                    playerInstance.UpdateMoveDirection(normalized);
+                    playerInstance.LastInputDirection = normalized;
                 },
                 CompositeInputActionState.Update
             );
         }
 
+        // This methods handles scoring, which is a while loop that only terminate when the token is canceled.
         async GDTaskVoid StartScoreCount(CancellationToken cancellationToken)
         {
             var currentScore = 0;
@@ -166,15 +167,17 @@ public partial class GamePanel : UIPanelArg<GamePanel.OpenContext, Empty>
             {
                 await GDTask
                     .Delay(oneSecond, cancellationToken: cancellationToken)
-                    .SuppressCancellationThrow();
+                    .SuppressCancellationThrow(); // This line suppresses the TaskCanceledException if this delay gets cancelled.
                 currentScore++;
                 _score.Text = currentScore.ToString();
             }
         }
 
+        // This methods handles mob spawning, which is a while loop that only terminate when the token is canceled.
         async GDTaskVoid StartMobSpawn(CancellationToken cancellationToken)
         {
             var mobSpawnTime = TimeSpan.FromSeconds(_mobSpawnTime);
+            var mobCount = 0;
             while (!cancellationToken.IsCancellationRequested)
             {
                 await GDTask
@@ -183,6 +186,8 @@ public partial class GamePanel : UIPanelArg<GamePanel.OpenContext, Empty>
 
                 var mob = _mobPrefab.Instantiate<MobController>();
 
+                mob.Name = $"Mob#{mobCount++}";
+                
                 mobSpawnLocation.ProgressRatio = Random.Shared.NextSingle();
 
                 var direction = mobSpawnLocation.Rotation + Mathf.Pi / 2;
@@ -193,7 +198,7 @@ public partial class GamePanel : UIPanelArg<GamePanel.OpenContext, Empty>
                 mob.Rotation = direction;
 
                 var velocity = new Vector2(Mathf.Lerp(150f, 250f, Random.Shared.NextSingle()), 0);
-                mob.LinearVelocity = velocity.Rotated(direction);
+                mob.LinearVelocity = velocity.Rotated(direction); // Make the mob moves.
 
                 mobContainer.AddChild(mob);
             }
