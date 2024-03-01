@@ -7,96 +7,154 @@ using GodotTask;
 
 namespace GDPanelFramework.DodgeTheCreeps;
 
+/// <summary>
+/// This panel serves as the game manager,
+/// it handles player and mob spawning, control binding, score counting
+/// and stops the game at an appropriate time.
+/// </summary>
 public partial class GamePanel : UIPanelArg<GamePanel.OpenContext, Empty>
 {
+    /// <summary>
+    /// The open argument required by this panel.
+    /// </summary>
+    /// <param name="CenterText">The text for displaying the <see cref="GetReadyText"/>.</param>
+    /// <param name="SceneObjectsModel">The model that holds scene object references.</param>
     public record struct OpenContext(Label CenterText, SceneObjectsModel SceneObjectsModel);
 
+    /// <summary>
+    /// An additional label at the top of the screen for displaying current score.
+    /// </summary>
     [Export] private Label _score;
+    
+    /// <summary>
+    /// The delay in seconds before the mob starts to spawn.
+    /// </summary>
     [Export] private double _startNewGameWaitTime;
+    
+    /// <summary>
+    /// The delay in seconds before the next mob spawns.
+    /// </summary>
     [Export] private double _mobSpawnTime;
+    
+    /// <summary>
+    /// The prefab of a node that has a <see cref="MobController"/> attached.
+    /// </summary>
     [Export] private PackedScene _mobPrefab;
+    
+    /// <summary>
+    /// The prefab of a node that has a <see cref="PlayerController"/> attached.
+    /// </summary>
     [Export] private PackedScene _playerPrefab;
 
+    /// <summary>
+    /// The cached size for the current window, <see cref="PlayerController"/> depends on this
+    /// to determine the bounds the player is allowed to move.  
+    /// </summary>
     private Vector2 _screenBound;
 
+    private const string GetReadyText = "Get Ready!";
+    
+    /// <summary>
+    /// Cache the size for the current viewport rect as the <see cref="_screenBound"/>.
+    /// </summary>
     protected override void _OnPanelInitialize()
     {
         base._OnPanelInitialize();
         _screenBound = GetViewportRect().Size;
     }
 
+    /// <summary>
+    /// Calls the async function that manages the core game logic.
+    /// </summary>
+    /// <param name="openContext">The arguments required by this panel.</param>
     protected override void _OnPanelOpen(OpenContext openContext) => StartNewGameAsync(openContext).Forget();
-
-    private const string Player_Up = "player_up";
-    private const string Player_Down = "player_down";
-    private const string Player_Left = "player_left";
-    private const string Player_Right = "player_right";
     
+    /// <summary>
+    /// Manages the main game logic.
+    /// </summary>
+    /// <param name="openContext">The arguments required by this function.</param>
     private async GDTask StartNewGameAsync(OpenContext openContext)
     {
+        // Extract the necessary variables from the open context.
         var (centerText, (mobContainer, playerContainer, mobSpawnLocation, playerSpawn)) = openContext;
 
+        // Destroy every existing mob instance under the mob container.
         foreach (var child in mobContainer.GetChildren()) child.QueueFree();
 
+        // Instantiate and initialize the player controller.
         var playerInstance = _playerPrefab.Instantiate<PlayerController>();
         playerContainer.AddChild(playerInstance);
         playerInstance.Position = playerSpawn.Position;
         playerInstance.ScreenBound = _screenBound;
+        
+        // Setup input bindings for the player controller instance,
+        // Player should able to move the character afterward
         SetupControls(true);
 
-        centerText.Text = "Get Ready!";
+        // Displays the GetReadyText and set score text to zero.
+        centerText.Text = GetReadyText;
         _score.Text = "0";
 
+        // Wait for some time before we start start spawning mobs.
         await GDTask.Delay(TimeSpan.FromSeconds(_startNewGameWaitTime));
 
+        // Hide the large text in the center of the screen.
         centerText.Hide();
 
+        // There two cancellation token sources are here for
+        // terminating the two loops (score counting and mob spawning).
         using var mobSpawnerCTS = new CancellationTokenSource();
         using var scoreTimerCTS = new CancellationTokenSource();
+        
+        // Starts the score count and mob spawn loops,
+        // since we don't need to wait for them (and they never returns)
+        // we call Forget() here to suppress the compiler warning.
         StartScoreCount(mobSpawnerCTS.Token).Forget();
         StartMobSpawn(scoreTimerCTS.Token).Forget();
 
-        await playerInstance.StartAndWaitForCollision();
+        // This line enables the player collision, and continues after player receiving any collision.
+        var collider = await playerInstance.StartAndWaitForCollision();
 
+        GD.Print($"Collision to: {collider.Name}");
+        
+        // Deletes the player, and unbind inputs.
+        SetupControls(false);
         playerInstance.QueueFree();
 
+        // Calling cancel on these two sources will effectively
+        // stops the score count and mob spawn loops. 
         mobSpawnerCTS.Cancel();
         scoreTimerCTS.Cancel();
 
-        centerText.Show();
+        // Sets and displays the "Game Over" text.
         centerText.Text = "Game Over";
+        centerText.Show();
 
-        SetupControls(false);
-
+        // Delay 2 seconds.
         await GDTask.Delay(TimeSpan.FromSeconds(2));
 
+        // Close this panel and return the control flow back to the main panel.
         ClosePanel(Empty.Default);
 
         return;
 
+        // Handles the input binding.
         void SetupControls(bool enable)
         {
-            ToggleInputVector(
-                enable,
-                Player_Down,
-                Player_Up,
-                Player_Left,
-                Player_Right,
-                rawInput =>
+            ToggleInputVector( // Associates a callback to a composite of input commands. 
+                enable, // When equals to true, registers the delegate, other wise removes the registration.
+                BuiltinInputNames.UIDown, // In Godot, -Y equals to move down, 
+                BuiltinInputNames.UIUp,   // so that we flip the up/down bindings here.
+                BuiltinInputNames.UILeft,
+                BuiltinInputNames.UIRight,
+                rawInput => // Gets called when input updates, for example, press and release UIRight will fire this delegate twice, with rawInput be (1, 0) and (0, 0)
                 {
                     var normalized = rawInput.Normalized();
+                    // Apply the last input direction to the player controller,
+                    // note that this function does not move the player, only updates the cached input direction.
                     playerInstance.UpdateMoveDirection(normalized);
                 },
                 CompositeInputActionState.Update
-            );
-            ToggleInputVector(
-                enable,
-                Player_Down,
-                Player_Up,
-                Player_Left,
-                Player_Right,
-                _ => playerInstance.UpdateMoveDirection(Vector2.Zero),
-                CompositeInputActionState.End
             );
         }
 
