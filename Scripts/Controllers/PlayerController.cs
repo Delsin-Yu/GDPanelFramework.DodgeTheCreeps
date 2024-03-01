@@ -24,7 +24,6 @@ public partial class PlayerController : Area2D
         if (_moveDirection.X != 0)
         {
             _animatedSprite.Animation = "walk";
-            _animatedSprite.FlipV = false;
             _animatedSprite.FlipH = _moveDirection.X < 0;
         }
         else if (_moveDirection.Y != 0)
